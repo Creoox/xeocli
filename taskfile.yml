@@ -1,0 +1,37 @@
+version: '3'
+tasks:
+  linux-binary:
+    desc: Build a linux amd binary
+    vars:
+      BB_VERSION: '1.12.194'
+      XEO_VERSION: '{{ .CLI_ARGS }}'
+    cmds:
+    - 'curl -sLO https://github.com/babashka/babashka/releases/download/v{{.BB_VERSION}}/babashka-{{.BB_VERSION}}-linux-amd64-static.tar.gz'
+    - 'tar xzf babashka-{{.BB_VERSION}}-linux-amd64-static.tar.gz -C .bb'
+    - 'bb uberjar xeo.jar -m xeo.core'
+    - 'cat .bb/bb xeo.jar > xeo'
+    - 'chmod +x xeo'
+    - 'tar czf xeo-{{.XEO_VERSION}}-linux-amd64.tar.gz xeo'
+    # - 'bb bb/upload_gh_asset.clj --file xeo-linux-amd64.tar.gz'
+    - 'rm -rf .bb/bb babashka-{{.BB_VERSION}}-linux-amd64-static.tar.gz'
+
+  windows-binary:
+    desc: Build a windows binary
+    vars:
+      BB_VERSION: '1.12.194'
+      XEO_VERSION: '{{ .CLI_ARGS }}'
+    cmds:
+    - 'curl -sLO https://github.com/babashka/babashka/releases/download/v{{.BB_VERSION}}/babashka-{{.BB_VERSION}}-windows-amd64.zip'
+    - 'unzip -f babashka-{{.BB_VERSION}}-windows-amd64.zip -d .bb'
+    - 'bb uberjar xeo.jar -m upload'
+    - 'cat .bb/bb.exe xeo.jar > xeo.exe'
+    - 'zip xeo-{{.XEO_VERSION}}-windows-amd64.zip xeo.exe scripts/uninstall.ps1'
+    - 'rm -rf .bb/bb babashka-{{.BB_VERSION}}-windows-amd64.zip xeo.jar xeo.exe xeo-windows-amd64.zip'
+
+  add-to-release:
+    desc: Add the binary to the release
+    vars:
+      XEO_VERSION: '{{ .CLI_ARGS }}'
+    cmds:
+    - 'bb upload_gh_asset.clj --tag {{ .XEO_VERSION }} --file xeo-{{ .XEO_VERSION }}-linux-amd64.tar.gz'
+    - 'bb upload_gh_asset.clj --tag {{ .XEO_VERSION }} --file xeo-{{ .XEO_VERSION }}-windows-amd64.zip'

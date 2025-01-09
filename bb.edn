@@ -1,0 +1,8 @@
+{:paths ["bb" "dev"]   
+ :deps  {io.github.borkdude/gh-release-artifact {:git/sha "05f8d8659e6805d513c59447ff41dc8497878462"}
+         }
+ :tasks {test
+         {:docs "Run unit tests." 
+          :extra-deps {io.github.matthewdowney/rich-comment-tests {:git/tag "v1.0.3" :git/sha "a8711e9"}}
+          :requires ([com.mjdowney.rich-comment-tests.test-runner :as rct])
+          :task (rct/run-tests-in-file-tree! {:dirs #{"src"}})}}}
