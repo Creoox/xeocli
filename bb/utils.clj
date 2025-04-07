@@ -54,6 +54,13 @@
 
 (defn read-secret [msg]
   (println msg)
-  (let [secret (.readPassword (System/console))]
-    (String. secret)))
+  (if-let [console (System/console)]
+    (let [secret (.readPassword console)]
+      (String. secret))
+    (do
+      (println "Console not available. Falling back to standard input.")
+      (read-line))))
 
+(comment
+  (read-secret "msg")
+  :end)

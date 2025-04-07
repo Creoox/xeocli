@@ -9,36 +9,37 @@
      [clojure.java.browse :refer [browse-url]]
      [clojure.java.io :as io]
      [clojure.string :as str]
+     [error :refer [error!]]
      [taoensso.timbre :as l :refer [set-level!]]
      [utils :refer [current-date-time file-base-name rand-str read-secret
                     valid-url?]]
      [xeo.processor.api :as converter]
-     [xeo.storage.api :refer [upload-file!]]
-     [xv-script :refer [error!]]))
+     [xeo.storage.api :refer [upload-file!]]))
 
 (def version "v0.0.1")
 (def supported-conversion-types ["ifc-xkt" "glb-xkt"])
 (def supported-validation-types ["ifc-ids-validate" "ifc-model-check"])
 
-  
-;; follow https://specifications.freedesktop.org/basedir-spec/latest/  
+
+;; follow https://specifications.freedesktop.org/basedir-spec/latest/
 (def XDG_CONFIG_HOME (or (System/getenv "XDG_CONFIG_HOME") (System/getProperty "user.home")))
 (def XDG_STATE_HOME (or (System/getenv "XDG_STATE_HOME") (System/getProperty "user.home")))
 
 (def XEO_STATE_PATH (str XDG_STATE_HOME "/.xeo"))
 (def XEO_TOKEN_PATH (str XDG_STATE_HOME "/.xeo/token"))
 
-(def STORAGE_URL (or (System/getenv "XEO_STORAGE_URL") "https://storage.xeovision.io/"))
-(def CONVERTER_URL (or (System/getenv "XEO_CONVERTER_URL") "https://converter.xeovision.io/"))
+(def STORAGE_URL (or (System/getenv "XEO_STORAGE_URL") "https://storage.xeo.vision/"))
+(def CONVERTER_URL (or (System/getenv "XEO_CONVERTER_URL") "https://converter.xeo.vision/"))
 
 
-(defn validate-token [{:keys [url token] :or {url "https://converter.xeovision.io/health"}}]
+(defn validate-token [{:keys [url token] :or {url "https://converter.xeo.vision/health"}}]
   (let [response (http/get url {:headers {"Authorization" (str "Bearer " token)
                                           "Content-Type" "application/json"}
                                 :throw false})]
     (l/debug "Health check response" response)
     (case (:status response)
       200 {:ok "Service is healthy."}
+      404 {:ok "Service is healthy."}
       401 {:error "Unauthorized access. Please check your XEO_TOKEN." :category :forbidden}
       403 {:error "Forbidden access. Please check your XEO_TOKEN." :category :forbidden}
       {:error (str "Unknown error with: " url)  :category :fault})))
@@ -50,9 +51,19 @@
   )
 
 (defn read-token-from-local-cache []
-  (if (.exists XEO_TOKEN_PATH)
+  (if (fs/exists? XEO_TOKEN_PATH)
     (slurp XEO_TOKEN_PATH)
     nil))
+
+(comment
+  (println XEO_TOKEN_PATH)
+  (println (io/file XEO_TOKEN_PATH))
+  (read-token-from-local-cache)
+
+  )
+(defn clear-local-cache []
+    (fs/delete-if-exists XEO_TOKEN_PATH)
+)
 
 (defn save-token-to-local-cache [token]
   (let [_ (fs/create-dirs XEO_STATE_PATH)
@@ -61,30 +72,33 @@
 
 (defn print-no-token []
   (binding [*out* *err*]
-    (println (str/trim "
-       Error! Token not provided. 
+    (println (str/trim "P
+       Error! Token not provided.
                       Please set the XEO_TOKEN environment variable.
 
       If you do not have it yet, you can get it at https://docs.xeo.vision
 
        You can set the token by running the following command in your terminal:
-       Windows Powershell: 
+       Windows Powershell:
          $env:XEO_TOKEN = '<your_token_here>'
        Windows Command Prompt:
-         set XEO_TOKEN= '<your_token_here>'                 
+         set XEO_TOKEN= '<your_token_here>'
 
-       Linux/Mac: 
+       Linux/Mac:
          export XEO_TOKEN='<your_token_here>'
 
                           "))))
 
 (defn retrive-and-validate-token []
-  (let [token (or (System/getenv "XEO_TOKEN") (read-token-from-local-cache) (read-secret "Enter your XEO_TOKEN:"))]
+  (let [token (or (if (str/blank? (System/getenv "XEO_TOKEN")) false (System/getenv "XEO_TOKEN"))
+                  (read-token-from-local-cache)
+                  (read-secret "Enter your XEO_TOKEN:"))]
     (if (nil? token)
       (do
         (print-no-token)
         (error! "Token not provided" {:category :incorect}))
-      (when-let [err (:error (validate-token {:url "https://storage.xeovision.io/health" :token token}))]
+      (when-let [err (:error (validate-token {:url "https://storage.xeo.vision/file/123e4567-e89b-12d3-a456-426614174000" :token token}))]
+        (clear-local-cache)
         (error! (:error err) {:category err})))
     (save-token-to-local-cache token)
     token))
@@ -96,10 +110,11 @@
   )
 
 (defn download-output [data dir-name filter-output]
+  (l/debug "Downloading output to dir-name" dir-name)
   (let [process-outputs (:processOutputs data)
-        dir (-> (str/replace dir-name "." "_") (str "_processed_xeo/" filter-output))
+        dir (-> (str/replace dir-name "." "_") (#(if (str/ends-with? % "/") % (str % "/"))) (str "xeo_output/" filter-output))
         outputs (filter #(= (:fileType %) filter-output) process-outputs)
-        dest-dir (io/file (System/getProperty "user.dir") dir)] ;; 
+        dest-dir (io/file (System/getProperty "user.dir") dir)] ;;
     ;; Create destination directory if it doesn't exist
     (.mkdirs dest-dir)
     (l/debug "Logs" data)
@@ -151,23 +166,23 @@ Most subcommands support the options:
 "
                   (cli/format-opts {:spec opts-spec})
                   "
-                      
-                      
+
+
 Subcommands:
 
   convert    Louch the conversion pipeline.
   validate   Louch the validation pipeline*.
-   
+
   help       Print this help message.
 
 Examples:
   xeo convert wall.ifc  # local file conversion, opens the viewer in the default browser
   xeo convert wall.ifc  --log --artifact --json  # drops logs and artifacts, prints the response as JSON
   xeo convert https://raw.githubusercontent.com/xeokit/xeokit-sdk/master/assets/models/ifc/Duplex.ifc --type ifc-xkt --airtifact # conversion from url
-  xeo validate wall.ifc 
+  xeo validate wall.ifc
   xeo validate wall.ifc --type ifc-ids-validate
   xeo validate https://raw.githubusercontent.com/xeokit/xeokit-sdk/master/assets/models/ifc/Duplex.ifc --type ifc-model-check --log --artifact
-                      
+
                       "))))
 
 (defn validate-conversion-type [convertsion-type]
@@ -189,7 +204,7 @@ Examples:
 
 Examples:
   xeo convert --type ifc-xkt wall.ifc  # local file conversion, opens the viewer in the default browser
-  xeo convert --type ifc-xkt --log ifc-xkt --artifact --json wall.ifc  # drops logs and artifacts, prints the response as JSON 
+  xeo convert --type ifc-xkt --log ifc-xkt --artifact --json wall.ifc  # drops logs and artifacts, prints the response as JSON
   ")
 
 (defn convert-exec [command-line-args]

@@ -3,10 +3,11 @@ tasks:
   linux-binary:
     desc: Build a linux amd binary
     vars:
-      BB_VERSION: '1.12.194'
+      BB_VERSION: '1.12.197'
       XEO_VERSION: '{{ .CLI_ARGS }}'
     cmds:
     - 'curl -sLO https://github.com/babashka/babashka/releases/download/v{{.BB_VERSION}}/babashka-{{.BB_VERSION}}-linux-amd64-static.tar.gz'
+    - 'mkdir -p .bb'
     - 'tar xzf babashka-{{.BB_VERSION}}-linux-amd64-static.tar.gz -C .bb'
     - 'bb uberjar xeo.jar -m xeo.core'
     - 'cat .bb/bb xeo.jar > xeo'
@@ -28,6 +29,21 @@ tasks:
     - 'zip xeo-{{.XEO_VERSION}}-windows-amd64.zip xeo.exe scripts/uninstall.ps1'
     - 'rm -rf .bb/bb babashka-{{.BB_VERSION}}-windows-amd64.zip xeo.jar xeo.exe xeo-windows-amd64.zip'
 
+  macos-binary:
+    desc: Build a macOS binary
+    vars:
+      BB_VERSION: '1.12.197'
+      XEO_VERSION: '{{ .CLI_ARGS }}'
+    cmds:
+    - 'curl -sLO https://github.com/babashka/babashka/releases/download/v{{.BB_VERSION}}/babashka-{{.BB_VERSION}}-macos-amd64.tar.gz'
+    - 'mkdir -p .bb'
+    - 'tar xzf babashka-{{.BB_VERSION}}-macos-amd64.tar.gz -C .bb'
+    - 'bb uberjar xeo.jar -m xeo.core'
+    - 'cat .bb/bb xeo.jar > xeo'
+    - 'chmod +x xeo'
+    - 'tar czf xeo-{{.XEO_VERSION}}-macos-amd64.tar.gz xeo'
+    - 'rm -rf .bb/bb babashka-{{.BB_VERSION}}-macos-amd64.tar.gz'
+
   add-to-release:
     desc: Add the binary to the release
     vars:
@@ -35,3 +51,4 @@ tasks:
     cmds:
     - 'bb upload_gh_asset.clj --tag {{ .XEO_VERSION }} --file xeo-{{ .XEO_VERSION }}-linux-amd64.tar.gz'
     - 'bb upload_gh_asset.clj --tag {{ .XEO_VERSION }} --file xeo-{{ .XEO_VERSION }}-windows-amd64.zip'
+    - 'bb upload_gh_asset.clj --tag {{ .XEO_VERSION }} --file xeo-{{ .XEO_VERSION }}-macos-amd64.tar.gz'

@@ -15,11 +15,11 @@
 
 (defn init-upload
   "Returns upload handle, which is a map {:keys [id urls multi-part-id]},
-   where: 
-   `id` is the key of the file in storage, 
-   `urls` is a list of urls to upload the parts to and 
+   where:
+   `id` is the key of the file in storage,
+   `urls` is a list of urls to upload the parts to and
    `multi-part-id` is the id of the multi-part upload.
-   
+
     Arguments:
       `file-name` - the name of the file to upload,
       `nr-of-parts` - the number of parts the file is split into,
@@ -55,10 +55,10 @@
         token (System/getenv "XEO_TOKEN")]
     (init-upload file-name nr-of-parts {:storage-url storage-url
                                         :token token}))
-  ;; 
+  ;;
   )
 
-(defn complete-multipart-upload 
+(defn complete-multipart-upload
   "Complete the multipart upload
     Arguments:
       `id` - the key of the file in storage
@@ -87,7 +87,7 @@
 
 
 (defn- process-chunk [[chunk-nr url chunk]]
-  ;; Function to process each chunk by sending it to the given URL 
+  ;; Function to process each chunk by sending it to the given URL
   (try
     (let [response (http/put url {:client client
                                   :body chunk
@@ -102,7 +102,7 @@
       (str "For url: " url " " e))))
 
 (defn- upload-file-in-chunks [file {:keys [storage-url token]}]
-  (let [chunk-size (* 5 1024 1024) ; 5MB in bytes 
+  (let [chunk-size (* 5 1024 1024) ; 5MB in bytes
         total-size (.length file)
         num-chunks (int (Math/ceil (/ total-size (double chunk-size))))
         _ (l/debug (format "Uploading %s size %d in %d chunks of %d bytes each"
@@ -171,6 +171,9 @@
     `:token` - the token to authenticate with the xeoStorage
     `:file` - the file to upload"
   [file-path {:keys [storage-url token] :as opts}]
+   (when (nil? token)
+    (error! "Token is not set. Please set the XEO_TOKEN environment variable."
+            {:category :fault}))
   (let [file (io/file file-path)
         response (future (upload-file-in-chunks file opts))] ;; (upload-file-classic file-name upload-url content-type)
     (while (not (realized? response))
@@ -186,8 +189,10 @@
 
 (comment
   (let [storage-url "https://storage.xeovision.io/"
-        token (System/getenv "XEO_TOKEN")]
-    (upload-file! "20160125OTC-Conference Center - IFC4.ifc" 
+        token "xwTg_NtJfUiOmNxNNaOiXp66KpgYP6dJbCTkkQzGeb1vO2GVKOzp0PdiFPUjzTeJ4h3wqCs"
+        ;; (System/getenv "XEO_TOKEN")
+        ]
+    (upload-file! "AR-Demo_Sample_Single_Building_01.ifc"
                   {:storage-url storage-url :token token}))
 ;;   (http/get (str storage-url "file/"  "c216a8c9-5d23-4582-b8a2-331c1b745633")  {:headers {"Authorization" (str "Bearer " token)}})
   ;;
