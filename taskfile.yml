@@ -23,7 +23,8 @@ tasks:
       XEO_VERSION: '{{ .CLI_ARGS }}'
     cmds:
     - 'curl -sLO https://github.com/babashka/babashka/releases/download/v{{.BB_VERSION}}/babashka-{{.BB_VERSION}}-windows-amd64.zip'
-    - 'unzip -f babashka-{{.BB_VERSION}}-windows-amd64.zip -d .bb'
+    - 'mkdir -p .bb'
+    - 'unzip babashka-{{.BB_VERSION}}-windows-amd64.zip -d .bb'
     - 'bb uberjar xeo.jar -m upload'
     - 'cat .bb/bb.exe xeo.jar > xeo.exe'
     - 'zip xeo-{{.XEO_VERSION}}-windows-amd64.zip xeo.exe scripts/uninstall.ps1'

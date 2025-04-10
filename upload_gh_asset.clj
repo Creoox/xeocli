@@ -6,8 +6,8 @@
    [clojure.string :as str]))
 
 
-(def cli-options {:org {:default "mmilian"}
-                  :repo {:default "xv"}
+(def cli-options {:org {:default "Creoox"}
+                  :repo {:default "xeocli"}
                   :tag {:default "v1.0.0"}
                   :file {}})
 
@@ -53,9 +53,10 @@
 
 
 (comment
-  (ghr/release-artifact {:org "mmilian"
-                         :repo "xv"
-                         :tag "v1.0.1"
-                         :file "xeo-v1.0.0-linux-amd64.tar.gz"
+  (ghr/release-artifact {:org "Creoox"
+                         :repo "xeocli"
+                         :tag "v0.0.1"
+                         :file "xeo--linux-amd64.tar.gz"
                          :sha256 true
-                         :overwrite true}))
+                         :overwrite true})
+  )

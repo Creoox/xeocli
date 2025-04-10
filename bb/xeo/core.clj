@@ -46,9 +46,9 @@
 
 (comment
   (validate-token {:url "https://converter.xeovision.io/health" :token (System/getenv "XEO_TOKEN")})
-  *e
+  *e)
 ;;
-  )
+
 
 (defn read-token-from-local-cache []
   (if (fs/exists? XEO_TOKEN_PATH)
@@ -58,12 +58,12 @@
 (comment
   (println XEO_TOKEN_PATH)
   (println (io/file XEO_TOKEN_PATH))
-  (read-token-from-local-cache)
+  (read-token-from-local-cache))
 
-  )
+
 (defn clear-local-cache []
-    (fs/delete-if-exists XEO_TOKEN_PATH)
-)
+  (fs/delete-if-exists XEO_TOKEN_PATH))
+
 
 (defn save-token-to-local-cache [token]
   (let [_ (fs/create-dirs XEO_STATE_PATH)
@@ -105,14 +105,17 @@
 
 (comment
   (retrive-and-validate-token)
-  *e
+  *e)
   ;;
-  )
+
 
 (defn download-output [data dir-name filter-output]
   (l/debug "Downloading output to dir-name" dir-name)
   (let [process-outputs (:processOutputs data)
-        dir (-> (str/replace dir-name "." "_") (#(if (str/ends-with? % "/") % (str % "/"))) (str "xeo_output/" filter-output))
+        dir-prefix (if (or (= dir-name ".") (= dir-name "./"))
+                     dir-name
+                     (-> (str/replace dir-name "." "_") (#(if (str/ends-with? % "/") % (str % "/")))))
+        dir (str dir-prefix (str "xeo_output/" filter-output))
         outputs (filter #(= (:fileType %) filter-output) process-outputs)
         dest-dir (io/file (System/getProperty "user.dir") dir)] ;;
     ;; Create destination directory if it doesn't exist
@@ -151,7 +154,7 @@
               :alias :a
               :default false}
    :output-dir {:desc "Output directory"
-                :default "`.`"
+                :default "."
                 :alias :o}})
 
 ;; Rewrite the subcommands to be more user-friendly
@@ -176,8 +179,8 @@ Subcommands:
   help       Print this help message.
 
 Examples:
-  xeo convert wall.ifc  # local file conversion, opens the viewer in the default browser
-  xeo convert wall.ifc  --log --artifact --json  # drops logs and artifacts, prints the response as JSON
+  xeo convert wall.ifc  --type ifc-xkt # local file conversion, opens the viewer in the default browser
+  xeo convert wall.ifc  --type ifc-xkt --log --artifact --json  # drops logs and artifacts, prints the response as JSON
   xeo convert https://raw.githubusercontent.com/xeokit/xeokit-sdk/master/assets/models/ifc/Duplex.ifc --type ifc-xkt --airtifact # conversion from url
   xeo validate wall.ifc
   xeo validate wall.ifc --type ifc-ids-validate
@@ -196,9 +199,9 @@ Examples:
   (validate-conversion-type "foo")
   (validate-conversion-type nil)
   (validate-conversion-type nil)
-  *e
+  *e)
   ;;
-  )
+
 
 (def convert-help "
 
@@ -284,14 +287,14 @@ Avaliable options\n"
                      :alias :d
                      :default false}
           :output-dir {:desc "Output directory"
-                       :default "`.`"
+                       :default "."
                        :alias :o}}
    :error-fn cli-err-hanlder})
 
 (comment
-  (cli/format-opts convert-cli)
+  (cli/format-opts convert-cli))
  ;;
-  )
+
 
 
 (defn validate-validation-type [type]
